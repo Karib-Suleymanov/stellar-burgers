@@ -1,18 +1,33 @@
-import { FC, useEffect } from 'react';
 import { ProfileOrdersUI } from '@ui-pages';
-import { TOrder } from '@utils-types';
+import { Preloader } from '@ui';
+import { selectProfileOrders, selectProfileOrdersLoading } from '@selectors';
+import { fetchProfileOrders } from '@slices';
+import { FC, useCallback, useEffect } from 'react';
+
 import { useDispatch, useSelector } from '../../services/store';
-import { fetchProfileOrders } from '../../services/slices/orders/ordersThunks';
-import { getProfileOrders } from '../../services/slices/orders/ordersSlice';
 
 export const ProfileOrders: FC = () => {
-  /** TODO: взять переменную из стора */
-  const orders: TOrder[] = useSelector(getProfileOrders); // список заказов юзера
   const dispatch = useDispatch();
 
+  const orders = useSelector(selectProfileOrders);
+  const isLoading = useSelector(selectProfileOrdersLoading);
+
+  const handleGetOrders = useCallback(() => {
+    void dispatch(fetchProfileOrders());
+  }, [dispatch]);
+
   useEffect(() => {
-    dispatch(fetchProfileOrders());
-  }, []);
+    handleGetOrders();
+
+    const timerId = window.setInterval(handleGetOrders, 3000);
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [handleGetOrders]);
+
+  if (isLoading && !orders.length) {
+    return <Preloader />;
+  }
 
   return <ProfileOrdersUI orders={orders} />;
 };

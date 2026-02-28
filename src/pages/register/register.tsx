@@ -1,10 +1,15 @@
 import { FC, SyntheticEvent, useState } from 'react';
+
+import { selectAuthError } from '@selectors';
+import { registerUser } from '@slices';
 import { RegisterUI } from '@ui-pages';
-import { useDispatch } from '../../services/store';
-import { registerUser } from '../../services/slices/user/userThunks';
+
+import { useDispatch, useSelector } from '../../services/store';
 
 export const Register: FC = () => {
   const dispatch = useDispatch();
+
+  const authError = useSelector(selectAuthError);
 
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -12,18 +17,21 @@ export const Register: FC = () => {
 
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
-    dispatch(
-      registerUser({
-        name: userName,
-        email,
-        password
-      })
-    );
+
+    const register = async () => {
+      try {
+        await dispatch(
+          registerUser({ name: userName, email, password })
+        ).unwrap();
+      } catch {}
+    };
+
+    void register();
   };
 
   return (
     <RegisterUI
-      errorText=''
+      errorText={authError || undefined}
       email={email}
       userName={userName}
       password={password}

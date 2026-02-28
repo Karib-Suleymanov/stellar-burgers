@@ -1,34 +1,75 @@
-import { FC, useEffect, useMemo } from 'react';
+import { FC, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+
+import {
+  selectFeedOrders,
+  selectIngredients,
+  selectOrderData,
+  selectOrderDataLoading,
+  selectOrderError,
+  selectProfileOrders
+} from '@selectors';
+import { clearOrderData, fetchOrderByNumber } from '@slices';
+import { TIngredient } from '@utils-types';
 import { Preloader } from '../ui/preloader';
 import { OrderInfoUI } from '../ui/order-info';
-import { TIngredient } from '@utils-types';
+
 import { useDispatch, useSelector } from '../../services/store';
-import { getOrder } from '../../services/slices/orders/ordersSlice';
-import { fetchOrder } from '../../services/slices/orders/ordersThunks';
-import { getAllIngredients } from '../../services/slices/burger-ingredients/burgerIngredientsSlice';
 
 export const OrderInfo: FC = () => {
-  /** TODO: взять переменные orderData и ingredients из стора */
-  const { number } = useParams();
   const dispatch = useDispatch();
-  const orderData = useSelector(getOrder);
-  const ingredients: TIngredient[] = useSelector(getAllIngredients);
+
+  const { number } = useParams();
+  const orderNumber = Number(number);
+
+  const feedOrders = useSelector(selectFeedOrders);
+  const profileOrders = useSelector(selectProfileOrders);
+  const orderData = useSelector(selectOrderData);
+  const orderDataLoading = useSelector(selectOrderDataLoading);
+  const orderError = useSelector(selectOrderError);
+  const ingredients = useSelector(selectIngredients);
+  const [hasRequestedOrder, setHasRequestedOrder] = useState(false);
+
+  const orderFromLists = useMemo(() => {
+    if (!Number.isFinite(orderNumber)) {
+      return null;
+    }
+
+    return [...feedOrders, ...profileOrders].find(
+      (item) => item.number === orderNumber
+    );
+  }, [feedOrders, profileOrders, orderNumber]);
+
+  const resolvedOrder = orderFromLists || orderData;
 
   useEffect(() => {
-    dispatch(fetchOrder(Number(number)));
-  }, []);
+    if (!Number.isFinite(orderNumber) || orderFromLists) {
+      return;
+    }
+
+    setHasRequestedOrder(true);
+    void dispatch(fetchOrderByNumber(orderNumber));
+  }, [dispatch, orderFromLists, orderNumber]);
+
+  useEffect(
+    () => () => {
+      dispatch(clearOrderData());
+    },
+    [dispatch]
+  );
 
   const orderInfo = useMemo(() => {
-    if (!orderData || !ingredients.length) return null;
+    if (!resolvedOrder || !ingredients.length) {
+      return null;
+    }
 
-    const date = new Date(orderData.createdAt);
+    const date = new Date(resolvedOrder.createdAt);
 
     type TIngredientsWithCount = {
       [key: string]: TIngredient & { count: number };
     };
 
-    const ingredientsInfo = orderData.ingredients.reduce(
+    const ingredientsInfo = resolvedOrder.ingredients.reduce(
       (acc: TIngredientsWithCount, item) => {
         if (!acc[item]) {
           const ingredient = ingredients.find((ing) => ing._id === item);
@@ -53,14 +94,22 @@ export const OrderInfo: FC = () => {
     );
 
     return {
-      ...orderData,
+      ...resolvedOrder,
       ingredientsInfo,
       date,
       total
     };
-  }, [orderData, ingredients]);
+  }, [resolvedOrder, ingredients]);
 
-  if (!orderInfo) {
+  if (!Number.isFinite(orderNumber)) {
+    return <p className='text text_type_main-medium'>Заказ не найден</p>;
+  }
+
+  if (hasRequestedOrder && orderError && !orderDataLoading && !orderInfo) {
+    return <p className='text text_type_main-medium'>Заказ не найден</p>;
+  }
+
+  if (orderDataLoading || !orderInfo) {
     return <Preloader />;
   }
 

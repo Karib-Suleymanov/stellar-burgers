@@ -1,24 +1,26 @@
 import { FC } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+
+import { selectIngredientById, selectIngredientsLoading } from '@selectors';
 import { Preloader } from '../ui/preloader';
 import { IngredientDetailsUI } from '../ui/ingredient-details';
+
 import { useSelector } from '../../services/store';
-import { getIngredientById } from '../../services/slices/burger-ingredients/burgerIngredientsSlice';
 
 export const IngredientDetails: FC = () => {
-  /** TODO: взять переменную из стора */
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id = '' } = useParams();
 
-  if (!id) {
-    navigate(-1);
-    return;
+  const isLoading = useSelector(selectIngredientsLoading);
+  const ingredientData = useSelector((state) =>
+    selectIngredientById(state, id)
+  );
+
+  if (isLoading && !ingredientData) {
+    return <Preloader />;
   }
 
-  const ingredientData = useSelector(getIngredientById)(id);
-
   if (!ingredientData) {
-    return <Preloader />;
+    return <p className='text text_type_main-medium'>Ингредиент не найден</p>;
   }
 
   return <IngredientDetailsUI ingredientData={ingredientData} />;
