@@ -1,13 +1,12 @@
 import { FC, memo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
+
 import { BurgerIngredientUI } from '@ui';
+import { addIngredient, setBun } from '@slices';
 import { TBurgerIngredientProps } from './type';
+
 import { useDispatch } from '../../services/store';
-import { isIngredientBun } from '../../utils/ingredient';
-import {
-  addIngredient,
-  setBun
-} from '../../services/slices/burger-constructor/burgerConstructorSlice';
 
 export const BurgerIngredient: FC<TBurgerIngredientProps> = memo(
   ({ ingredient, count }) => {
@@ -15,11 +14,12 @@ export const BurgerIngredient: FC<TBurgerIngredientProps> = memo(
     const dispatch = useDispatch();
 
     const handleAdd = () => {
-      if (isIngredientBun(ingredient)) {
+      if (ingredient.type === 'bun') {
         dispatch(setBun(ingredient));
-      } else {
-        dispatch(addIngredient(ingredient));
+        return;
       }
+
+      dispatch(addIngredient({ ...ingredient, id: uuidv4() }));
     };
 
     return (

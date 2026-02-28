@@ -1,44 +1,55 @@
 import { FC, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+
 import { TConstructorIngredient } from '@utils-types';
 import { BurgerConstructorUI } from '@ui';
-import { useDispatch, useSelector } from '../../services/store';
+import { clearConstructor, clearOrderModal, createOrder } from '@slices';
 import {
-  clearOrderData,
-  getConstructorItems,
-  getOrderModalData,
-  getOrderRequest
-} from '../../services/slices/burger-constructor/burgerConstructorSlice';
-import { orderBurger } from '../../services/slices/burger-constructor/burgerConstructorThunks';
-import { getIsAuthenticated } from '../../services/slices/user/userSlice';
+  selectConstructorItems,
+  selectOrderModalData,
+  selectOrderRequest,
+  selectUser
+} from '@selectors';
+
+import { getCookie } from '../../utils/cookie';
+import { useDispatch, useSelector } from '../../services/store';
 
 export const BurgerConstructor: FC = () => {
-  /** TODO: взять переменные constructorItems, orderRequest и orderModalData из стора */
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const constructorItems = useSelector(getConstructorItems);
-  const orderRequest = useSelector(getOrderRequest);
-  const isAuthenticated = useSelector(getIsAuthenticated);
+  const location = useLocation();
 
-  const orderModalData = useSelector(getOrderModalData);
+  const constructorItems = useSelector(selectConstructorItems);
+  const orderRequest = useSelector(selectOrderRequest);
+  const orderModalData = useSelector(selectOrderModalData);
+  const user = useSelector(selectUser);
 
   const onOrderClick = () => {
     if (!constructorItems.bun || orderRequest) return;
-    if (!isAuthenticated) {
-      return navigate('/login');
+
+    if (!user && !getCookie('accessToken')) {
+      navigate('/login', { state: { from: location } });
+      return;
     }
 
-    dispatch(
-      orderBurger([
-        constructorItems.bun._id,
-        ...constructorItems.ingredients.map(({ _id }) => _id),
-        constructorItems.bun._id
-      ])
-    );
+    const ingredientsIds = [
+      constructorItems.bun._id,
+      ...constructorItems.ingredients.map((item) => item._id),
+      constructorItems.bun._id
+    ];
+
+    const submitOrder = async () => {
+      try {
+        await dispatch(createOrder(ingredientsIds)).unwrap();
+        dispatch(clearConstructor());
+      } catch {}
+    };
+
+    void submitOrder();
   };
 
   const closeOrderModal = () => {
-    dispatch(clearOrderData());
+    dispatch(clearOrderModal());
   };
 
   const price = useMemo(
