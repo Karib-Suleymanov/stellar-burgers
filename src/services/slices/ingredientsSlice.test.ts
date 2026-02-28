@@ -3,22 +3,7 @@ import {
   ingredientsReducer,
   initialState
 } from './ingredientsSlice';
-
-const mockIngredients = [
-  {
-    _id: 'bun-1',
-    name: 'Флюоресцентная булка R2-D3',
-    type: 'bun',
-    proteins: 44,
-    fat: 26,
-    carbohydrates: 85,
-    calories: 643,
-    price: 988,
-    image: 'https://code.s3.yandex.net/react/code/bun-01.png',
-    image_mobile: 'https://code.s3.yandex.net/react/code/bun-01-mobile.png',
-    image_large: 'https://code.s3.yandex.net/react/code/bun-01-large.png'
-  }
-];
+import { mockIngredients } from '../__tests__/test-constants';
 
 describe('ingredientsSlice reducer', () => {
   it('должен выставлять isLoading=true при fetchIngredients.pending', () => {

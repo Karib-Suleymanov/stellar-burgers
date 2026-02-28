@@ -1,5 +1,3 @@
-import { TConstructorIngredient, TIngredient, TOrder } from '@utils-types';
-
 import {
   addIngredient,
   clearConstructor,
@@ -10,144 +8,98 @@ import {
   setBun
 } from './constructorSlice';
 import { createOrder } from './orderSlice';
-
-const bun: TIngredient = {
-  _id: 'bun-1',
-  name: 'Флюоресцентная булка R2-D3',
-  type: 'bun',
-  proteins: 44,
-  fat: 26,
-  carbohydrates: 85,
-  calories: 643,
-  price: 988,
-  image: 'https://code.s3.yandex.net/react/code/bun-01.png',
-  image_mobile: 'https://code.s3.yandex.net/react/code/bun-01-mobile.png',
-  image_large: 'https://code.s3.yandex.net/react/code/bun-01-large.png'
-};
-
-const mainIngredient: TConstructorIngredient = {
-  _id: 'main-1',
-  id: 'main-item-1',
-  name: 'Котлета из метеорита',
-  type: 'main',
-  proteins: 800,
-  fat: 400,
-  carbohydrates: 120,
-  calories: 4200,
-  price: 3000,
-  image: 'https://code.s3.yandex.net/react/code/meat-01.png',
-  image_mobile: 'https://code.s3.yandex.net/react/code/meat-01-mobile.png',
-  image_large: 'https://code.s3.yandex.net/react/code/meat-01-large.png'
-};
-
-const sauceIngredient: TConstructorIngredient = {
-  _id: 'sauce-1',
-  id: 'sauce-item-1',
-  name: 'Соус Spicy-X',
-  type: 'sauce',
-  proteins: 30,
-  fat: 20,
-  carbohydrates: 40,
-  calories: 30,
-  price: 90,
-  image: 'https://code.s3.yandex.net/react/code/sauce-02.png',
-  image_mobile: 'https://code.s3.yandex.net/react/code/sauce-02-mobile.png',
-  image_large: 'https://code.s3.yandex.net/react/code/sauce-02-large.png'
-};
-
-const order: TOrder = {
-  _id: 'order-1',
-  status: 'done',
-  name: 'Флюоресцентный бургер',
-  createdAt: '2026-02-23T10:00:00.000Z',
-  updatedAt: '2026-02-23T10:10:00.000Z',
-  number: 12345,
-  ingredients: [bun._id, mainIngredient._id, sauceIngredient._id]
-};
+import {
+  mockBun,
+  mockMainIngredient,
+  mockSauceIngredient,
+  mockOrder,
+  createOrderIngredients
+} from '../__tests__/test-constants';
 
 describe('constructorSlice reducer', () => {
+  const initialState = {
+    bun: null,
+    ingredients: []
+  };
+
   it('должен добавлять ингредиент в начинку', () => {
-    const stateWithBun = constructorReducer(undefined, setBun(bun));
+    const stateWithBun = constructorReducer(initialState, setBun(mockBun));
     const state = constructorReducer(
       stateWithBun,
-      addIngredient(mainIngredient)
+      addIngredient(mockMainIngredient)
     );
 
-    expect(state.bun).toEqual(bun);
-    expect(state.ingredients).toEqual([mainIngredient]);
+    expect(state.bun).toEqual(mockBun);
+    expect(state.ingredients).toEqual([mockMainIngredient]);
   });
 
   it('должен удалять ингредиент из начинки', () => {
-    const stateWithIngredients = constructorReducer(
-      constructorReducer(undefined, addIngredient(mainIngredient)),
-      addIngredient(sauceIngredient)
+    let state = constructorReducer(initialState, addIngredient(mockMainIngredient));
+    state = constructorReducer(state, addIngredient(mockSauceIngredient));
+
+    const newState = constructorReducer(
+      state,
+      removeIngredient(mockMainIngredient.id)
     );
 
-    const state = constructorReducer(
-      stateWithIngredients,
-      removeIngredient(mainIngredient.id)
-    );
-
-    expect(state.ingredients).toEqual([sauceIngredient]);
+    expect(newState.ingredients).toEqual([mockSauceIngredient]);
   });
 
   it('должен менять порядок ингредиентов в начинке', () => {
-    const stateWithIngredients = constructorReducer(
-      constructorReducer(undefined, addIngredient(mainIngredient)),
-      addIngredient(sauceIngredient)
-    );
+    let state = constructorReducer(initialState, addIngredient(mockMainIngredient));
+    state = constructorReducer(state, addIngredient(mockSauceIngredient));
 
-    const movedUpState = constructorReducer(
-      stateWithIngredients,
-      moveIngredientUp(1)
-    );
-    expect(movedUpState.ingredients).toEqual([sauceIngredient, mainIngredient]);
+    const movedUpState = constructorReducer(state, moveIngredientUp(1));
+    expect(movedUpState.ingredients).toEqual([mockSauceIngredient, mockMainIngredient]);
 
-    const movedDownState = constructorReducer(
-      movedUpState,
-      moveIngredientDown(0)
-    );
-    expect(movedDownState.ingredients).toEqual([
-      mainIngredient,
-      sauceIngredient
-    ]);
+    const movedDownState = constructorReducer(movedUpState, moveIngredientDown(0));
+    expect(movedDownState.ingredients).toEqual([mockMainIngredient, mockSauceIngredient]);
   });
 
   it('должен очищать конструктор по экшену clearConstructor', () => {
-    const stateWithIngredients = constructorReducer(
-      constructorReducer(
-        constructorReducer(undefined, setBun(bun)),
-        addIngredient(mainIngredient)
-      ),
-      addIngredient(sauceIngredient)
-    );
+    let state = constructorReducer(initialState, setBun(mockBun));
+    state = constructorReducer(state, addIngredient(mockMainIngredient));
+    state = constructorReducer(state, addIngredient(mockSauceIngredient));
 
-    const state = constructorReducer(stateWithIngredients, clearConstructor());
+    const newState = constructorReducer(state, clearConstructor());
 
-    expect(state.bun).toBeNull();
-    expect(state.ingredients).toEqual([]);
+    expect(newState.bun).toBeNull();
+    expect(newState.ingredients).toEqual([]);
   });
 
   it('должен очищать конструктор после успешного создания заказа', () => {
-    const stateWithIngredients = constructorReducer(
-      constructorReducer(
-        constructorReducer(undefined, setBun(bun)),
-        addIngredient(mainIngredient)
-      ),
-      addIngredient(sauceIngredient)
+    let state = constructorReducer(initialState, setBun(mockBun));
+    state = constructorReducer(state, addIngredient(mockMainIngredient));
+    state = constructorReducer(state, addIngredient(mockSauceIngredient));
+
+    const orderIngredients = createOrderIngredients();
+    const newState = constructorReducer(
+      state,
+      createOrder.fulfilled(mockOrder, 'request-id', orderIngredients)
     );
 
-    const state = constructorReducer(
-      stateWithIngredients,
-      createOrder.fulfilled(order, 'request-id', [
-        bun._id,
-        mainIngredient._id,
-        sauceIngredient._id,
-        bun._id
-      ])
-    );
+    expect(newState.bun).toBeNull();
+    expect(newState.ingredients).toEqual([]);
+  });
 
-    expect(state.bun).toBeNull();
+  it('не должен добавлять булку в массив ingredients', () => {
+    const state = constructorReducer(initialState, addIngredient(mockBun as any));
+    
     expect(state.ingredients).toEqual([]);
+    expect(state.bun).toBeNull();
+  });
+
+  it('не должен изменять состояние при moveIngredientUp с некорректным индексом', () => {
+    let state = constructorReducer(initialState, addIngredient(mockMainIngredient));
+    
+    const newState = constructorReducer(state, moveIngredientUp(5));
+    expect(newState.ingredients).toEqual([mockMainIngredient]);
+  });
+
+  it('не должен изменять состояние при moveIngredientDown с некорректным индексом', () => {
+    let state = constructorReducer(initialState, addIngredient(mockMainIngredient));
+    
+    const newState = constructorReducer(state, moveIngredientDown(-1));
+    expect(newState.ingredients).toEqual([mockMainIngredient]);
   });
 });
